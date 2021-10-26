@@ -1,0 +1,157 @@
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>// Online Code Compiler | Compile Your Code Now</title>
+    <link rel="icon" href="code.png" type="image/x-icon">
+</head>
+<style>
+      @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap');
+
+</style>
+
+<body style="background-color:#c424fc; font-family: monospace; margin: 8px;" >
+    <h2> Online Code Compiler | <a href="index.html" style="text-decoration: none;color: #24252A;" class="homelink">Home</a></h2>
+
+    <h4>Write Your Code Below </h4>
+    <textarea id="source" style="width: calc(50% - 8px); height: 40%; resize: vertical;background-color:#24252A ;color: white;">
+// Sample Code
+</textarea>
+
+    <h3>Language</h3>
+    <select id="lang">
+        <option selected>--- Select A Language ---</option>
+        <option>C#</option>
+        <option >C++</option>
+        <option>C</option>
+        <option>Java</option>
+        <option>JavaScript</option>
+        <option>PHP</option>
+        <option>Python</option>
+        <option>Ruby</option>
+        <option>Kotlin</option>
+        
+
+    </select>
+
+    <h4 >Provide Input (If Any)</h4>
+    <textarea id="input" style="width: calc(50% - 8px); height: 10%; resize: vertical;background-color: #24252A;color: white;">Sample Input (Delete This Input Before Providing Your Input)</textarea>
+
+    <h4>Expected Output<sub><small>(optional)</small></sub></h4>
+    <textarea id="expected-output" style="width: calc(50% - 8px); height: 10%; resize: vertical;background-color:#24252A ;color: white;"></textarea>
+
+    </br></br>
+    <button id="run" onclick="run()">▶️ Run (Ctrl + Enter)</button>
+
+    <textarea readonly id="output" style="width: 50%; height: 100%; position: fixed; top: 0; right: 0; resize: none;; background-color: #24252A; color: white; ">// Output will Be Displayed Here </textarea>
+
+    <script type="text/javascript">
+        API_KEY = "921e25a95emshb4871c8ecfe84dap18062ejsn9fea52ce5b6d"; 
+        var language_to_id = {
+            
+            "C": 50,
+            "C#": 51,
+            "C++": 54,
+            "Java": 62,
+            "Python": 71,
+            "Ruby": 72,
+            "JavaScript":63,
+            "Kotlin":78,
+            "PHP":68
+        };
+
+        function encode(str) {
+            return btoa(unescape(encodeURIComponent(str || "")));
+        }
+
+        function decode(bytes) {
+            var escaped = escape(atob(bytes || ""));
+            try {
+                return decodeURIComponent(escaped);
+            } catch {
+                return unescape(escaped);
+            }
+        }
+
+        function errorHandler(jqXHR, textStatus, errorThrown) {
+            $("#output").val(`${JSON.stringify(jqXHR, null, 4)}`);
+            $("#run").prop("disabled", false);
+        }
+
+        function check(token) {
+            $("#output").val($("#output").val() + "\n⏬ Checking Your submission status...");
+            $.ajax({
+                url: `https://judge0-ce.p.rapidapi.com/submissions/${token}?base64_encoded=true`,
+                type: "GET",
+                headers: {
+                    "x-rapidapi-host": "judge0-ce.p.rapidapi.com",
+	                "x-rapidapi-key": API_KEY
+                },
+                success: function (data, textStatus, jqXHR) {
+                    if ([1, 2].includes(data["status"]["id"])) {
+                        $("#output").val($("#output").val() + "\nℹ️ Status: " + data["status"]["description"]);
+                        setTimeout(function() { check(token) }, 1000);
+                    }
+                    else {
+                        var output = [decode(data["compile_output"]), decode(data["stdout"])].join("\n").trim();
+                        $("#output").val(`${data["status"]["id"] != "3" ? "🔴" : "🟢"} ${data["status"]["description"]}\n${output}`);
+                        $("#run").prop("disabled", false);
+                    }
+                },
+                error: errorHandler
+            });
+        }
+
+        function run() {
+            $("#run").prop("disabled", true);
+            $("#output").val("⚙️ Submitting Your Code To The Compiler ...");
+
+            let encodedExpectedOutput = encode($("#expected-output").val());
+            if (encodedExpectedOutput === "") {
+                encodedExpectedOutput = null; // Assume that user does not want to use expected output if it is empty.
+            }
+
+            $.ajax({
+                url: "https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=true&wait=false",
+                type: "POST",
+                contentType: "application/json",
+                headers: {
+                    "x-rapidapi-host": "judge0-ce.p.rapidapi.com",
+	                "x-rapidapi-key": API_KEY
+                },
+                data: JSON.stringify({
+                    "language_id": language_to_id[$("#lang").val()],
+                    "source_code": encode($("#source").val()),
+                    "stdin": encode($("#input").val()),
+                    "expected_output": encodedExpectedOutput,
+                    "redirect_stderr_to_stdout": true
+                }),
+                success: function(data, textStatus, jqXHR) {
+                    $("#output").val($("#output").val() + "\n🎉 Successfully Submitted Your Code.");
+                    setTimeout(function() { check(data["token"]) }, 2000);
+                },
+                error: errorHandler
+            });
+        }
+
+        $("body").keydown(function (e) {
+            if (e.ctrlKey && e.keyCode == 13) {
+                run();
+            }
+        });
+
+        $("textarea").keydown(function (e) {
+            if (e.keyCode == 9) {
+                e.preventDefault();
+                var start = this.selectionStart;
+                var end = this.selectionEnd;
+
+                var append = "    ";
+                $(this).val($(this).val().substring(0, start) + append + $(this).val().substring(end));
+
+                this.selectionStart = this.selectionEnd = start + append.length;
+            }
+        });
+
+        $("#source").focus();
+    </script>
+</body>
